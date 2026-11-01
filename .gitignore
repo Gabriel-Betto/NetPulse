@@ -1,0 +1,6 @@
+dados/
+__pycache__/
+*.pyc
+*.db
+.netpulse_id
+.venv/
