@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NetPulse</title>
+<style>
+  :root {
+    --bg: #0b1220; --painel: #121a2c; --painel2: #17223a; --borda: #223052;
+    --texto: #e6ecf8; --suave: #8c9bb8; --azul: #3b82f6;
+    --ok: #22c55e; --info: #38bdf8; --alerta: #f59e0b; --critico: #ef4444; --offline: #64748b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--texto);
+         font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; padding: 16px 24px;
+           border-bottom: 1px solid var(--borda); background: var(--painel); }
+  .marca { font-weight: 700; font-size: 18px; letter-spacing: .3px; }
+  .marca span { color: var(--azul); }
+  .resumo { display: flex; gap: 10px; flex-wrap: wrap; margin-left: auto; }
+  .chip { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
+          background: var(--painel2); border: 1px solid var(--borda); font-size: 13px; }
+  .chip b { font-size: 15px; }
+  .ponto { width: 9px; height: 9px; border-radius: 50%; background: var(--offline); display: inline-block; }
+  .s-ok .ponto, .ponto.ok { background: var(--ok); } .s-info .ponto, .ponto.info { background: var(--info); }
+  .s-alerta .ponto, .ponto.alerta { background: var(--alerta); } .s-critico .ponto, .ponto.critico { background: var(--critico); }
+  .s-offline .ponto, .ponto.offline { background: var(--offline); }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; padding: 20px 24px; }
+  @media (max-width: 960px) { main { grid-template-columns: 1fr; } }
+  #grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; align-content: start; }
+  .card { background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; padding: 16px;
+          cursor: pointer; transition: border-color .15s, transform .15s; border-top: 3px solid var(--offline); }
+  .card:hover { border-color: var(--azul); transform: translateY(-1px); }
+  .card.s-ok { border-top-color: var(--ok); } .card.s-info { border-top-color: var(--info); }
+  .card.s-alerta { border-top-color: var(--alerta); } .card.s-critico { border-top-color: var(--critico); }
+  .card.s-offline { border-top-color: var(--offline); opacity: .85; }
+  .topo { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+  .nome { font-weight: 600; font-size: 16px; overflow-wrap: anywhere; }
+  .sub { color: var(--suave); font-size: 12px; }
+  .pilula { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 10px;
+            border-radius: 999px; background: var(--painel2); border: 1px solid var(--borda); white-space: nowrap; }
+  .linha { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; font-size: 13px; }
+  .linha span:first-child { color: var(--suave); }
+  .barra { height: 7px; background: var(--painel2); border-radius: 4px; overflow: hidden; margin-top: 4px; }
+  .barra i { display: block; height: 100%; background: var(--ok); border-radius: 4px; }
+  .barra i.alerta { background: var(--alerta); } .barra i.critico { background: var(--critico); }
+  .medida { margin-top: 10px; font-size: 12px; }
+  .medida .rot { display: flex; justify-content: space-between; color: var(--suave); }
+  .selos { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .selo { font-size: 11px; padding: 2px 8px; border-radius: 6px; background: var(--painel2); color: var(--suave); }
+  .selo.alerta { color: var(--alerta); } .selo.info { color: var(--info); } .selo.critico { color: var(--critico); }
+  aside { background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; padding: 16px; align-self: start; }
+  aside h2, .painel h3 { margin: 0 0 10px; font-size: 14px; color: var(--suave); text-transform: uppercase; letter-spacing: .6px; }
+  .evento { padding: 8px 0; border-top: 1px solid var(--borda); font-size: 13px; }
+  .evento:first-of-type { border-top: 0; }
+  .vazio { color: var(--suave); padding: 24px; text-align: center; grid-column: 1 / -1; }
+  #fundo { position: fixed; inset: 0; background: rgba(2, 6, 15, .7); display: none; align-items: flex-start;
+           justify-content: center; overflow-y: auto; padding: 32px 16px; z-index: 5; }
+  #fundo.aberto { display: flex; }
+  .painel { background: var(--painel); border: 1px solid var(--borda); border-radius: 14px; width: min(860px, 100%); padding: 22px; }
+  .painel .fechar { float: right; background: none; border: 0; color: var(--suave); font-size: 22px; cursor: pointer; }
+  .secao { margin-top: 20px; }
+  .duas { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  canvas { width: 100%; height: 90px; background: var(--painel2); border-radius: 8px; display: block; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--borda); overflow-wrap: anywhere; }
+  th { color: var(--suave); font-weight: 500; }
+  .rolagem { max-height: 220px; overflow-y: auto; }
+  button.acao, input.campo { font: inherit; border-radius: 8px; border: 1px solid var(--borda); padding: 8px 12px; }
+  button.acao { background: var(--azul); color: white; cursor: pointer; border-color: var(--azul); }
+  button.acao:disabled { opacity: .5; cursor: default; }
+  input.campo { background: var(--painel2); color: var(--texto); min-width: 240px; }
+  pre { background: var(--painel2); padding: 10px; border-radius: 8px; max-height: 180px; overflow: auto; white-space: pre-wrap; font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="marca">Net<span>Pulse</span></div>
+  <div class="resumo" id="resumo"></div>
+</header>
+<main>
+  <section id="grade"></section>
+  <aside><h2>Problemas abertos</h2><div id="eventos"></div></aside>
+</main>
+<div id="fundo"><div class="painel" id="painel"></div></div>
+
+<script>
+"use strict";
+const ROTULO = { ok: "Tudo certo", info: "Aviso", alerta: "Alerta", critico: "Crítico", offline: "Desligado" };
+let dispositivos = [], abertoId = null, tokenAdmin = "";
+
+function el(tag, cls, texto) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (texto !== undefined && texto !== null) e.textContent = texto;
+  return e;
+}
+function dur(s) {
+  if (s == null) return "—";
+  s = Math.max(0, Math.floor(s));
+  const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+  if (d) return d + "d " + h + "h";
+  if (h) return h + "h " + m + "min";
+  return Math.max(m, 1) + " min";
+}
+function gb(b) { return b == null ? "—" : (b / 1073741824).toFixed(b >= 1073741824 * 100 ? 0 : 1) + " GB"; }
+function nivel(p, a, c) { return p >= c ? "critico" : p >= a ? "alerta" : ""; }
+function medida(rotulo, pct, a, c, extra) {
+  const m = el("div", "medida"), r = el("div", "rot");
+  r.append(el("span", "", rotulo), el("span", "", pct == null ? "—" : Math.round(pct) + "%" + (extra ? " · " + extra : "")));
+  const b = el("div", "barra"), i = el("i", pct == null ? "" : nivel(pct, a, c));
+  i.style.width = (pct == null ? 0 : Math.min(100, pct)) + "%";
+  b.append(i); m.append(r, b);
+  return m;
+}
+function pilula(status) {
+  const p = el("span", "pilula s-" + status);
+  p.append(el("span", "ponto"), document.createTextNode(ROTULO[status] || status));
+  return p;
+}
+function redeTexto(r) {
+  if (!r) return "—";
+  const partes = [];
+  if (r.tipo) partes.push(r.tipo === "wifi" ? "Wi-Fi" : "Cabo");
+  if (r.ssid) partes.push(r.ssid);
+  if (r.ip) partes.push(r.ip);
+  return partes.join(" · ") || "—";
+}
+function tempoLigacao(d) {
+  if (d.status === "offline") return ["Desligado há", dur(d.offline_ha_s)];
+  if (d.tipo === "agente") return ["Ligado há", dur(d.ligado_ha_s)];
+  return ["Respondendo", d.latencia_ms != null ? Math.round(d.latencia_ms) + " ms" : "—"];
+}
+function disp(v) { return v == null ? "—" : v.toFixed(v === 100 ? 0 : 1) + "%"; }
+
+function criarCard(d) {
+  const c = el("div", "card s-" + d.status);
+  c.tabIndex = 0;
+  c.addEventListener("click", () => abrir(d.id));
+  c.addEventListener("keydown", e => { if (e.key === "Enter") abrir(d.id); });
+  const topo = el("div", "topo"), t = el("div");
+  t.append(el("div", "nome", d.nome),
+    el("div", "sub", d.tipo === "agente" ? (d.so || "agente") : "sem agente · " + d.host + (d.porta ? ":" + d.porta : "")));
+  topo.append(t, pilula(d.status));
+  c.append(topo);
+  const [rot, val] = tempoLigacao(d);
+  const l1 = el("div", "linha"); l1.append(el("span", "", rot), el("span", "", val)); c.append(l1);
+  const rel = d.relatorio;
+  if (rel) {
+    const l2 = el("div", "linha"); l2.append(el("span", "", "Rede"), el("span", "", redeTexto(rel.rede))); c.append(l2);
+    c.append(medida("CPU", rel.cpu, 95, 101), medida("Memória", rel.ram && rel.ram.percentual, 85, 95));
+    (rel.discos || []).slice(0, 3).forEach(x => c.append(medida("Disco " + x.ponto, x.percentual, 80, 90, gb(x.livre) + " livres")));
+  }
+  const l3 = el("div", "linha"); l3.append(el("span", "", "Disponibilidade 24h"), el("span", "", disp(d.disponibilidade_24h))); c.append(l3);
+  const selos = el("div", "selos");
+  const jaTem = new Set();
+  d.problemas.filter(p => p.codigo !== "offline").forEach(p => {
+    const rotulo = { atualizacoes: "Atualizações do sistema", apps: "Apps desatualizados", reiniciar: "Reiniciar" }[p.codigo]
+      || (p.codigo.startsWith("disco") ? "Disco cheio" : p.codigo === "ram" ? "Memória alta" : p.codigo === "cpu" ? "CPU alta" : p.codigo);
+    if (jaTem.has(rotulo)) return;
+    jaTem.add(rotulo);
+    selos.append(el("span", "selo " + p.gravidade.toLowerCase().replace("í", "i"), rotulo));
+  });
+  if (selos.childNodes.length) c.append(selos);
+  return c;
+}
+
+function atualizarResumo() {
+  const cont = { ok: 0, info: 0, alerta: 0, critico: 0, offline: 0 };
+  dispositivos.forEach(d => cont[d.status]++);
+  const r = document.getElementById("resumo"); r.replaceChildren();
+  [["ok", "Ok"], ["alerta", "Alerta"], ["critico", "Crítico"], ["offline", "Desligados"]].forEach(([k, nome]) => {
+    const c = el("div", "chip s-" + k); c.append(el("span", "ponto"), el("b", "", String(cont[k] + (k === "ok" ? cont.info : 0))), el("span", "", nome));
+    r.append(c);
+  });
+}
+function renderGrade() {
+  const g = document.getElementById("grade"); g.replaceChildren();
+  if (!dispositivos.length) g.append(el("div", "vazio", "Nenhum dispositivo ainda. Rode o agente em um computador ou use 'netpulse adicionar'."));
+  const ordem = { critico: 0, offline: 1, alerta: 2, info: 3, ok: 4 };
+  [...dispositivos].sort((a, b) => ordem[a.status] - ordem[b.status] || a.nome.localeCompare(b.nome))
+    .forEach(d => g.append(criarCard(d)));
+}
+function renderEventos(lista) {
+  const box = document.getElementById("eventos"); box.replaceChildren();
+  if (!lista.length) box.append(el("div", "sub", "Nenhum problema aberto."));
+  lista.slice(0, 30).forEach(p => {
+    const e = el("div", "evento");
+    e.append(el("b", "", p.dispositivo), el("div", "", p.detalhe),
+      el("div", "sub", p.gravidade + " · desde " + new Date(p.aberto_em * 1000).toLocaleString("pt-BR")));
+    box.append(e);
+  });
+}
+
+function grafico(canvas, pontos, campo, max, cor) {
+  const dpr = window.devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.clientHeight;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  const ctx = canvas.getContext("2d"); ctx.scale(dpr, dpr); ctx.clearRect(0, 0, w, h);
+  const v = pontos.filter(p => p[campo] != null);
+  if (v.length < 2) { ctx.fillStyle = "#8c9bb8"; ctx.fillText("sem dados suficientes", 10, h / 2); return; }
+  const t0 = v[0].ts, t1 = v[v.length - 1].ts || t0 + 1;
+  const topo = max || Math.max(...v.map(p => p[campo]), 1) * 1.2;
+  ctx.strokeStyle = cor; ctx.lineWidth = 2; ctx.beginPath();
+  v.forEach((p, i) => {
+    const x = (p.ts - t0) / Math.max(t1 - t0, 1) * (w - 8) + 4, y = h - 4 - p[campo] / topo * (h - 8);
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  });
+  ctx.stroke();
+}
+function tabela(cabecalhos, linhas) {
+  const t = el("table"), th = el("tr");
+  cabecalhos.forEach(c => th.append(el("th", "", c))); t.append(th);
+  linhas.forEach(l => { const tr = el("tr"); l.forEach(c => tr.append(el("td", "", c))); t.append(tr); });
+  return t;
+}
+async function abrir(id) { abertoId = id; document.getElementById("fundo").classList.add("aberto"); await renderDetalhe(); }
+function fechar() { abertoId = null; document.getElementById("fundo").classList.remove("aberto"); }
+document.getElementById("fundo").addEventListener("click", e => { if (e.target.id === "fundo") fechar(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") fechar(); });
+
+async function renderDetalhe() {
+  const d = dispositivos.find(x => x.id === abertoId); if (!d) return;
+  const p = document.getElementById("painel"), rel = d.relatorio || {};
+  const hist = await (await fetch("/api/dispositivos/" + d.id + "/historico?horas=24")).json();
+  p.replaceChildren();
+  const x = el("button", "fechar", "×"); x.addEventListener("click", fechar);
+  p.append(x, el("div", "nome", d.nome), el("div", "sub", (rel.so_versao || d.so || "") + (rel.versao_agente ? " · agente " + rel.versao_agente : "")));
+  const status = el("div", "secao"); status.append(pilula(d.status)); p.append(status);
+  const info = el("div", "secao");
+  const [rot, val] = tempoLigacao(d);
+  info.append(tabela(["Item", "Valor"], [
+    [rot, val], ["Disponibilidade 24h / 7 dias", disp(d.disponibilidade_24h) + " / " + disp(d.disponibilidade_7d)],
+    ["Último contato", d.ultimo_contato ? new Date(d.ultimo_contato * 1000).toLocaleString("pt-BR") : "—"],
+    ["Rede em uso", redeTexto(rel.rede)], ["Gateway", (rel.rede && rel.rede.gateway) || "—"],
+    ["Atualizações do sistema", rel.atualizacoes && rel.atualizacoes.pendentes != null ? String(rel.atualizacoes.pendentes) + (rel.atualizacoes.reiniciar ? " (reinício pendente)" : "") : "não verificado"],
+  ]));
+  p.append(info);
+  const gs = el("div", "secao duas");
+  [["CPU % (24h)", "cpu", 100, "#3b82f6"], ["Memória % (24h)", "ram", 100, "#a78bfa"], ["Disco % (24h)", "disco", 100, "#f59e0b"], ["Latência ms (24h)", "latencia_ms", null, "#22c55e"]]
+    .forEach(([nome, campo, max, cor]) => {
+      if (d.tipo === "sonda" && campo !== "latencia_ms") return;
+      if (d.tipo === "agente" && campo === "latencia_ms") return;
+      const b = el("div"); const c = el("canvas"); b.append(el("div", "sub", nome), c); gs.append(b);
+      requestAnimationFrame(() => grafico(c, hist, campo, max, cor));
+    });
+  p.append(gs);
+  const apps = rel.aplicativos || {};
+  const sa = el("div", "secao");
+  sa.append(el("h3", "", "Aplicativos" + (apps.total != null ? " (" + apps.total + " instalados)" : "")));
+  if (apps.atualizaveis == null) sa.append(el("div", "sub", "Não foi possível verificar atualizações de aplicativos neste computador."));
+  else if (!apps.atualizaveis.length) sa.append(el("div", "sub", "Todos os aplicativos verificados estão atualizados."));
+  else { const r = el("div", "rolagem"); r.append(tabela(["Aplicativo", "Instalada", "Disponível"], apps.atualizaveis.map(a => [a.nome, a.versao, a.disponivel]))); sa.append(r); }
+  if ((apps.instalados || []).length) {
+    const det = el("details"); det.append(el("summary", "sub", "Ver todos os aplicativos instalados"));
+    const r = el("div", "rolagem"); r.append(tabela(["Aplicativo", "Versão"], apps.instalados.map(a => [a.nome, a.versao]))); det.append(r); sa.append(det);
+  }
+  p.append(sa);
+  if (d.problemas.length) {
+    const sp = el("div", "secao"); sp.append(el("h3", "", "Problemas abertos"));
+    sp.append(tabela(["Gravidade", "Detalhe"], d.problemas.map(q => [q.gravidade, q.detalhe]))); p.append(sp);
+  }
+  if (d.ssh) {
+    const ss = el("div", "secao"); ss.append(el("h3", "", "Atualizar por SSH"));
+    const campo = el("input", "campo"); campo.type = "password"; campo.placeholder = "token de administrador"; campo.value = tokenAdmin;
+    const btn = el("button", "acao", "Atualizar aplicativos agora"), saida = el("pre"); saida.hidden = true;
+    btn.addEventListener("click", async () => {
+      tokenAdmin = campo.value; btn.disabled = true; saida.hidden = false; saida.textContent = "Enviando...";
+      try {
+        const r = await fetch("/api/dispositivos/" + d.id + "/acao", { method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + tokenAdmin }, body: JSON.stringify({ acao: "atualizar_apps" }) });
+        const j = await r.json(); saida.textContent = r.ok ? "Atualização iniciada. Acompanhe abaixo." : (j.erro || "Falhou");
+      } catch (e) { saida.textContent = "Erro de conexão."; }
+      btn.disabled = false;
+    });
+    ss.append(campo, document.createTextNode(" "), btn, saida);
+    const acoes = await (await fetch("/api/acoes")).json();
+    const minhas = acoes.filter(a => a.dispositivo_id === d.id).slice(0, 5);
+    if (minhas.length) { ss.append(el("div", "sub", "Últimas ações")); ss.append(tabela(["Início", "Ação", "Resultado"], minhas.map(a =>
+      [new Date(a.inicio * 1000).toLocaleString("pt-BR"), a.acao, a.fim == null ? "em andamento" : a.codigo === 0 ? "sucesso" : "falhou (" + a.codigo + ")"]))); }
+    p.append(ss);
+  }
+}
+
+async function atualizar() {
+  try {
+    const [d, p] = await Promise.all([fetch("/api/dispositivos").then(r => r.json()), fetch("/api/problemas?abertos=1").then(r => r.json())]);
+    dispositivos = d; atualizarResumo(); renderGrade(); renderEventos(p);
+    if (abertoId && !document.activeElement.matches("input")) await renderDetalhe();
+  } catch (e) { /* servidor fora do ar: tenta de novo no próximo ciclo */ }
+}
+atualizar(); setInterval(atualizar, 5000);
+</script>
+</body>
+</html>
