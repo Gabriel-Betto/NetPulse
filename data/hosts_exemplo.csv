@@ -1,0 +1,5 @@
+ip;mac;hostname;descricao
+192.168.10.1;00:0c:29:aa:00:01;pfsense;Firewall e gateway
+192.168.10.60;;iphone-gabriel;Celular
+192.168.10.61;;tv-sala;TV da sala
+192.168.10.70;;impressora-01;Impressora

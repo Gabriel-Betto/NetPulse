@@ -1,0 +1,5 @@
+{
+  "telegram": { "token": "123456:TOKEN-DO-BOT", "chat_id": "123456789" },
+  "webhook": { "url": "https://exemplo.local/hooks/netpulse" },
+  "email": { "servidor": "smtp.exemplo.com", "porta": 587, "usuario": "alertas@exemplo.com", "senha": "troque-esta-senha", "de": "alertas@exemplo.com", "para": "voce@exemplo.com" }
+}
