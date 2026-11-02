@@ -86,6 +86,15 @@ class TestColetores(unittest.TestCase):
         self.assertEqual(coletores.parse_netsh_wlan("  Nome : Wi-Fi\n  SSID                   : Casa Gabriel \n  BSSID : aa:bb"), "Casa Gabriel")
         self.assertIsNone(coletores.parse_netsh_wlan("  Nome : Wi-Fi\n  Estado : desconectado"))
 
+    def test_rota_windows(self):
+        self.assertEqual(coletores.parse_rota_windows("192.168.1.1|Ethernet\r\n"), {"gateway": "192.168.1.1", "interface": "Ethernet"})
+        self.assertEqual(coletores.parse_rota_windows("|"), {"gateway": None, "interface": None})
+        self.assertEqual(coletores.parse_rota_windows(""), {"gateway": None, "interface": None})
+
+    def test_versao_do_agente_vem_do_pacote(self):
+        from netpulse import __version__
+        self.assertEqual(coletores.VERSAO_AGENTE, __version__)
+
     def test_cache_so_refaz_depois_do_ttl(self):
         chamadas, tempo = [], [0.0]
         cache = coletores.CacheAtualizacoes(ttl_s=100, buscar=lambda: chamadas.append(1) or {"n": len(chamadas)},
@@ -175,6 +184,14 @@ class TestSincronizar(unittest.TestCase):
         ev = regras.sincronizar(self.banco, "d1", [], 240.0)
         self.assertEqual([e["tipo"] for e in ev], ["resolvido"])
         self.assertEqual(self.banco.abertos_de("d1"), {})
+
+    def test_escopo_nao_resolve_o_que_nao_sabe(self):
+        P = regras.Problema
+        regras.sincronizar(self.banco, "d1", [P("disco:C:", regras.ALERTA, "81%")], 200.0)
+        ev = regras.sincronizar(self.banco, "d1", [regras.problema_offline("PC", 300)], 500.0, {"offline": 150.0}, {"offline"})
+        self.assertEqual([(e["tipo"], e["codigo"]) for e in ev], [("aberto", "offline")],
+                         "ao sumir, o disco cheio não pode virar 'resolvido'")
+        self.assertEqual(set(self.banco.abertos_de("d1")), {"disco:C:", "offline"})
 
     def test_abertura_personalizada_para_offline(self):
         regras.sincronizar(self.banco, "d1", [regras.problema_offline("PC", 300)], 500.0, {"offline": 150.0})
@@ -370,6 +387,20 @@ class TestApp(unittest.TestCase):
         self.assertIsNone(d["ligado_ha_s"])
         app.processar_relatorio(relatorio())   # voltou
         self.assertEqual(app.visao()[0]["status"], "ok")
+
+    def test_problemas_sobrevivem_ao_ficar_offline_sem_avisos_falsos(self):
+        notif = mock.Mock(); notif.ativo = True
+        app, rel = criar_app()
+        app.notificador = notif
+        app.processar_relatorio(relatorio(discos=[("C:\\", 95)]))
+        rel.avancar(600); app.verificar()                       # PC desligou
+        d = app.visao()[0]
+        self.assertEqual(d["status"], "offline")
+        self.assertIn("disco:C:\\", {p["codigo"] for p in d["problemas"]}, "o disco cheio continua registrado")
+        app.processar_relatorio(relatorio(discos=[("C:\\", 95)]))   # voltou, disco ainda cheio
+        eventos = [(e["tipo"], e["codigo"]) for c in notif.notificar_em_segundo_plano.call_args_list for e in c.args[0]]
+        self.assertEqual(eventos, [("aberto", "disco:C:\\"), ("aberto", "offline"), ("resolvido", "offline")],
+                         "sem 'resolvido' falso do disco e sem avisar o mesmo disco duas vezes")
 
     def test_disponibilidade(self):
         app, rel = criar_app()

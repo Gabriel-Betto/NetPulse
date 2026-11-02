@@ -110,15 +110,22 @@ class Avaliador:
 
 
 def sincronizar(banco, dispositivo_id: str, confirmados: list[Problema], agora: float,
-                abertura: dict | None = None) -> list[dict]:
+                abertura: dict | None = None, escopo: set[str] | None = None) -> list[dict]:
     """Abre/fecha problemas no banco e devolve os eventos que merecem aviso.
 
     Evento 'aberto' só quando o problema é novo ou piorou de gravidade;
     'resolvido' quando some. Mudança de detalhe (91% → 92%) é gravada em silêncio.
+
+    ``escopo`` limita quais códigos esta chamada pode abrir/fechar. Usado quando o dispositivo
+    some: só 'offline' é atualizado, e os outros problemas ficam como estavam (não dá para
+    saber se foram resolvidos sem um relatório novo).
     """
     eventos = []
     abertura = abertura or {}  # ex.: {'offline': ts do último contato}, para a duração sair certa
     atuais = banco.abertos_de(dispositivo_id)
+    if escopo is not None:
+        atuais = {c: v for c, v in atuais.items() if c in escopo}
+        confirmados = [p for p in confirmados if p.codigo in escopo]
     for p in confirmados:
         antigo = atuais.get(p.codigo)
         if antigo is None:

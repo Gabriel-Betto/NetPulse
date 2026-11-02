@@ -149,7 +149,9 @@ function criarCard(d) {
   if (rel) {
     const l2 = el("div", "linha"); l2.append(el("span", "", "Rede"), el("span", "", redeTexto(rel.rede))); c.append(l2);
     c.append(medida("CPU", rel.cpu, 95, 101), medida("Memória", rel.ram && rel.ram.percentual, 85, 95));
-    (rel.discos || []).slice(0, 3).forEach(x => c.append(medida("Disco " + x.ponto, x.percentual, 80, 90, gb(x.livre) + " livres")));
+    const discos = rel.discos || [];
+    discos.slice(0, 6).forEach(x => c.append(medida("Disco " + x.ponto, x.percentual, 80, 90, gb(x.livre) + " livres")));
+    if (discos.length > 6) c.append(el("div", "sub", "+ " + (discos.length - 6) + " disco(s). Abra para ver todos."));
   }
   const l3 = el("div", "linha"); l3.append(el("span", "", "Disponibilidade 24h"), el("span", "", disp(d.disponibilidade_24h))); c.append(l3);
   const selos = el("div", "selos");
@@ -235,6 +237,11 @@ async function renderDetalhe() {
     ["Atualizações do sistema", rel.atualizacoes && rel.atualizacoes.pendentes != null ? String(rel.atualizacoes.pendentes) + (rel.atualizacoes.reiniciar ? " (reinício pendente)" : "") : "não verificado"],
   ]));
   p.append(info);
+  if ((rel.discos || []).length) {
+    const sd = el("div", "secao"); sd.append(el("h3", "", "Discos"));
+    sd.append(tabela(["Disco", "Uso", "Livre", "Total"], rel.discos.map(x => [x.ponto, Math.round(x.percentual) + "%", gb(x.livre), gb(x.total)])));
+    p.append(sd);
+  }
   const gs = el("div", "secao duas");
   [["CPU % (24h)", "cpu", 100, "#3b82f6"], ["Memória % (24h)", "ram", 100, "#a78bfa"], ["Disco % (24h)", "disco", 100, "#f59e0b"], ["Latência ms (24h)", "latencia_ms", null, "#22c55e"]]
     .forEach(([nome, campo, max, cor]) => {

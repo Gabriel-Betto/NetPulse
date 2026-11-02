@@ -15,7 +15,7 @@ import shutil
 import subprocess
 import time
 
-VERSAO_AGENTE = "1.0.0"
+from . import __version__ as VERSAO_AGENTE
 FS_REAIS = {"ext2", "ext3", "ext4", "xfs", "btrfs", "zfs", "f2fs", "ntfs", "ntfs3"}
 
 
@@ -258,6 +258,17 @@ def _ip_local() -> str | None:
         s.close()
 
 
+PS_ROTA = ("$r = Get-NetRoute -DestinationPrefix 0.0.0.0/0 | Sort-Object RouteMetric | Select-Object -First 1; "
+           "\"$($r.NextHop)|$($r.InterfaceAlias)\"")
+
+
+def parse_rota_windows(texto: str) -> dict:
+    """Saída 'gateway|interface' do PowerShell."""
+    linha = texto.strip().splitlines()[0] if texto.strip() else ""
+    gateway, _, interface = linha.partition("|")
+    return {"gateway": gateway.strip() or None, "interface": interface.strip() or None}
+
+
 def rede(executar=subprocess.run) -> dict:
     """{'tipo': 'wifi'|'cabo'|None, 'interface', 'ip', 'gateway', 'ssid'}."""
     info = {"tipo": None, "interface": None, "ip": _ip_local(), "gateway": None, "ssid": None}
@@ -276,11 +287,9 @@ def rede(executar=subprocess.run) -> dict:
             w = executar(["netsh", "wlan", "show", "interfaces"], capture_output=True, text=True, timeout=10)
             info["ssid"] = parse_netsh_wlan(w.stdout) if w.returncode == 0 else None
             info["tipo"] = "wifi" if info["ssid"] else "cabo"
-            g = executar(_ps_codificado(
-                "(Get-NetRoute -DestinationPrefix 0.0.0.0/0 | Sort-Object RouteMetric | Select-Object -First 1).NextHop"),
-                capture_output=True, text=True, timeout=20)
-            if g.returncode == 0 and g.stdout.strip():
-                info["gateway"] = g.stdout.strip().splitlines()[0]
+            g = executar(_ps_codificado(PS_ROTA), capture_output=True, text=True, timeout=20)
+            if g.returncode == 0:
+                info.update({k: v for k, v in parse_rota_windows(g.stdout).items() if v})
     except (OSError, subprocess.SubprocessError):
         pass
     return info

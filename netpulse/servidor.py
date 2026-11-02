@@ -142,7 +142,7 @@ class App:
                     if sem_contato is None or sem_contato > self.limites["offline_apos_s"]:
                         brutos = [regras.problema_offline(d["nome"], sem_contato)]
                         eventos = regras.sincronizar(self.banco, d["id"], brutos, agora,
-                                                     {"offline": d["ultimo_contato"] or agora})
+                                                     {"offline": d["ultimo_contato"] or agora}, {"offline"})
                         self._avisar(d["nome"], eventos)
                 else:
                     latencia = self._testar(d["host"], d["porta"])
@@ -154,7 +154,7 @@ class App:
                         sem = agora - d["ultimo_contato"] if d["ultimo_contato"] else None
                         brutos = [regras.problema_offline(d["nome"], sem)]
                     eventos = regras.sincronizar(self.banco, d["id"], brutos, agora,
-                                                 {"offline": d["ultimo_contato"] or agora})
+                                                 {"offline": d["ultimo_contato"] or agora}, {"offline"})
                     self._avisar(d["nome"], eventos)
         if agora - self._ultima_limpeza > 3600:
             self.banco.limpar_antigos(agora - RETENCAO_S)
